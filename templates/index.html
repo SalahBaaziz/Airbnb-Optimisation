@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AirbnbEdge — Airbnb Profit Optimiser</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1E3A5F;--blue:#2563EB;--teal:#0D9488;--amber:#D97706;
+  --red:#EF4444;--green:#16A34A;--text:#374151;--muted:#6B7280;
+  --border:#E5E7EB;--bg:#F9FAFB;--white:#FFFFFF;--card:#FFFFFF;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 25px -5px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ─── Nav ─── */
+nav{background:var(--navy);padding:0 1.5rem;display:flex;align-items:center;height:60px;
+    position:sticky;top:0;z-index:100;box-shadow:var(--shadow-lg);gap:.5rem}
+.nav-brand{color:#fff;font-weight:700;font-size:1.15rem;letter-spacing:-.3px;margin-right:1.5rem;white-space:nowrap}
+.nav-brand span{color:#60A5FA}
+.nav-tabs{display:flex;gap:0;height:60px}
+.nav-tab{height:60px;padding:0 1.1rem;color:rgba(255,255,255,.7);font-size:.85rem;font-weight:500;
+         cursor:pointer;border:none;background:none;border-bottom:3px solid transparent;
+         transition:all .2s;white-space:nowrap}
+.nav-tab:hover{color:#fff;background:rgba(255,255,255,.06)}
+.nav-tab.active{color:#fff;border-bottom-color:#60A5FA}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:.75rem}
+.city-selector{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);
+               color:#fff;border-radius:6px;padding:.3rem .6rem;font-size:.82rem;
+               font-family:inherit;cursor:pointer;outline:none}
+.city-selector option{color:var(--text);background:#fff}
+.nav-status{font-size:.78rem;color:rgba(255,255,255,.5);display:flex;align-items:center;gap:.4rem}
+.status-dot{width:8px;height:8px;border-radius:50%;background:#6B7280;transition:background .3s}
+.status-dot.ready{background:#16A34A}
+.status-dot.loading{background:#D97706;animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.custom-banner{background:linear-gradient(90deg,var(--teal),var(--blue));color:#fff;
+               font-size:.75rem;font-weight:600;padding:.2rem .7rem;border-radius:10px;display:none}
+.custom-banner.visible{display:inline-block}
+
+/* ─── Layout ─── */
+.page{display:none}.page.active{display:block}
+.container{max-width:1400px;margin:0 auto;padding:1.5rem 1.5rem}
+
+/* ─── KPI Grid ─── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.9rem;margin-bottom:1.5rem}
+.kpi-card{background:var(--white);border-radius:10px;box-shadow:var(--shadow);
+          padding:1rem 1.1rem;border-left:4px solid var(--navy);position:relative}
+.kpi-card.blue{border-left-color:var(--blue)}.kpi-card.teal{border-left-color:var(--teal)}
+.kpi-card.amber{border-left-color:var(--amber)}.kpi-card.green{border-left-color:var(--green)}
+.kpi-card.red{border-left-color:var(--red)}
+.kpi-val{font-size:1.4rem;font-weight:700;color:var(--navy);margin-bottom:.2rem}
+.kpi-lbl{font-size:.72rem;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+
+/* ─── Charts ─── */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+.charts-grid.three{grid-template-columns:1fr 1fr 1fr}
+.charts-grid.single{grid-template-columns:1fr}
+.charts-grid.wide{grid-template-columns:1.6fr 1fr}
+.chart-card{background:var(--white);border-radius:10px;box-shadow:var(--shadow);padding:.9rem 1rem;overflow:hidden}
+.chart-card .js-plotly-plot,.chart-card .plot-container{width:100%!important}
+.chart-card .plotly{overflow:hidden}
+.chart-loading{display:flex;align-items:center;justify-content:center;min-height:300px;
+               color:var(--muted);font-size:.88rem;gap:.6rem}
+.chart-error{display:flex;align-items:center;justify-content:center;min-height:200px;
+             color:var(--red);font-size:.85rem;text-align:center;padding:1rem}
+
+/* ─── Section headings ─── */
+.section-heading{font-size:1rem;font-weight:700;color:var(--navy);margin:1.6rem 0 1rem;
+                 display:flex;align-items:center;gap:.6rem}
+.section-heading::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ─── Analyser layout ─── */
+.analyser-layout{display:grid;grid-template-columns:420px 1fr;gap:1.4rem;align-items:start}
+.form-card{background:var(--white);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;position:sticky;top:72px}
+.form-header{background:var(--navy);padding:1.2rem 1.4rem;color:#fff}
+.form-header h2{font-size:1rem;font-weight:700}
+.form-header p{font-size:.78rem;color:rgba(255,255,255,.65);margin-top:.2rem}
+.form-body{padding:1.2rem 1.4rem;max-height:calc(100vh - 160px);overflow-y:auto}
+.form-section{margin-bottom:1.2rem}
+.form-section-title{font-size:.75rem;font-weight:700;color:var(--navy);text-transform:uppercase;
+                    letter-spacing:.5px;margin-bottom:.6rem;border-bottom:1px solid var(--border);
+                    padding-bottom:.35rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:.5rem}
+.form-row.single{grid-template-columns:1fr}
+.form-row label{font-size:.75rem;font-weight:500;color:var(--muted);display:block;margin-bottom:.2rem}
+.form-row input,.form-row select{width:100%;padding:.48rem .65rem;border:1.5px solid var(--border);
+  border-radius:7px;font-size:.85rem;font-family:inherit;color:var(--text);background:#fff;transition:border .15s}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+
+/* ─── Amenity grid ─── */
+.amenity-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.35rem;margin-top:.4rem}
+.amenity-item{display:flex;align-items:center;gap:.35rem;padding:.35rem .4rem;border-radius:6px;
+              border:1px solid var(--border);cursor:pointer;transition:all .15s;font-size:.75rem;
+              color:var(--text);user-select:none}
+.amenity-item:hover{border-color:var(--blue);background:#EFF6FF}
+.amenity-item.checked{border-color:var(--teal);background:#F0FDFA;color:var(--teal);font-weight:500}
+.amenity-item input{display:none}
+
+/* ─── Buttons ─── */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.55rem 1.1rem;border-radius:8px;
+     font-size:.87rem;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:inherit}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1D4ED8}
+.btn-primary:disabled{opacity:.6;cursor:not-allowed}
+.btn-secondary{background:#fff;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-secondary:hover{background:#EFF6FF}
+.btn-teal{background:var(--teal);color:#fff}.btn-teal:hover{background:#0F766E}
+.btn-block{width:100%;justify-content:center;padding:.75rem}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#DC2626}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#15803D}
+.btn-amber{background:var(--amber);color:#fff}.btn-amber:hover{background:#B45309}
+
+/* ─── Results ─── */
+.results-panel{min-height:400px}
+.results-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;
+                      min-height:400px;background:var(--white);border-radius:12px;
+                      box-shadow:var(--shadow);color:var(--muted);text-align:center;padding:3rem}
+.results-placeholder .icon{font-size:3rem;margin-bottom:1rem;opacity:.3}
+.score-badge{display:inline-flex;align-items:center;gap:.6rem;padding:.5rem 1rem;
+             border-radius:25px;font-weight:700;font-size:.85rem}
+.score-badge.excellent{background:#DCFCE7;color:#15803D}
+.score-badge.strong{background:#DBEAFE;color:#1D4ED8}
+.score-badge.good{background:#FEF9C3;color:#A16207}
+.score-badge.average{background:#FEE2E2;color:#B91C1C}
+.score-badge.underperforming{background:#F3F4F6;color:#6B7280}
+.results-header{background:var(--white);border-radius:12px;padding:1.4rem 1.6rem;
+                box-shadow:var(--shadow);margin-bottom:1.2rem;
+                display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.results-header h2{font-size:1.1rem;font-weight:700;color:var(--navy)}
+.rev-numbers{display:flex;gap:2rem;flex-wrap:wrap}
+.rev-item .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:500}
+.rev-item .val{font-size:1.5rem;font-weight:700;color:var(--navy)}
+.rev-item .val.green{color:var(--green)}
+.pl-table{width:100%;border-collapse:collapse;font-size:.86rem}
+.pl-table th{text-align:left;padding:.55rem .8rem;background:var(--navy);color:#fff;font-weight:600;font-size:.78rem}
+.pl-table td{padding:.5rem .8rem;border-bottom:1px solid var(--border)}
+.pl-table tr:nth-child(even) td{background:#F9FAFB}
+.pl-table .total-row td{font-weight:700;background:#F0F9FF;border-top:2px solid var(--blue)}
+.pl-table .profit-row td{font-weight:700;font-size:.95rem;background:#ECFDF5;color:var(--green);border-top:2px solid var(--green)}
+.pl-table .profit-row.loss td{background:#FEF2F2;color:var(--red);border-top-color:var(--red)}
+.pl-table .pct-cell{color:var(--blue);font-weight:600}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.opp-list{display:flex;flex-direction:column;gap:.5rem}
+.opp-item{display:flex;align-items:center;gap:.8rem;padding:.7rem 1rem;
+          background:var(--white);border-radius:8px;border:1px solid var(--border)}
+.opp-rank{width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;
+          font-size:.72rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.opp-name{flex:1;font-size:.86rem;font-weight:500}
+.opp-uplift{font-weight:700;color:var(--green);font-size:.9rem;white-space:nowrap}
+.opp-abs{font-size:.78rem;color:var(--muted);white-space:nowrap}
+
+/* ─── Scraper / Upload ─── */
+.scraper-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem}
+.scraper-card{background:var(--white);border-radius:12px;box-shadow:var(--shadow);padding:2rem}
+.scraper-card h2{font-size:1.1rem;font-weight:700;color:var(--navy);margin-bottom:.3rem}
+.scraper-card>p{color:var(--muted);font-size:.86rem;margin-bottom:1.4rem}
+.url-input-row{display:flex;gap:.7rem;margin-bottom:1rem}
+.url-input-row input{flex:1;padding:.65rem .9rem;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;font-family:inherit}
+.url-input-row input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.scrape-result{margin-top:1.5rem;display:none}.scrape-result.visible{display:block}
+.field-preview{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:.6rem;margin:1rem 0}
+.field-item{background:var(--bg);border-radius:6px;padding:.5rem .7rem;border:1px solid var(--border)}
+.field-item .field-k{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.field-item .field-v{font-size:.88rem;font-weight:600;color:var(--navy);margin-top:.15rem}
+.field-item.scraped{border-color:var(--teal);background:#F0FDFA}
+.field-item.default{border-color:var(--border);opacity:.7}
+
+/* ─── Upload zone ─── */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:2.5rem 1.5rem;
+             text-align:center;cursor:pointer;transition:all .2s;background:var(--bg)}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--blue);background:#EFF6FF}
+.upload-zone .icon{font-size:2.5rem;margin-bottom:.7rem;opacity:.5}
+.upload-zone p{font-size:.88rem;color:var(--muted);margin-bottom:.4rem}
+.upload-zone .hint{font-size:.75rem;color:var(--muted);opacity:.7}
+.progress-bar{height:6px;border-radius:3px;background:var(--border);margin:1rem 0;overflow:hidden;display:none}
+.progress-bar.visible{display:block}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--teal));border-radius:3px;
+               transition:width .3s;width:0}
+.upload-summary{margin-top:1rem;background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;
+                padding:1rem;display:none}
+.upload-summary.visible{display:block}
+.upload-summary h4{font-size:.9rem;font-weight:700;color:var(--teal);margin-bottom:.6rem}
+.upload-stat{font-size:.82rem;color:var(--text);margin-bottom:.3rem}
+.upload-stat strong{color:var(--navy)}
+
+/* ─── Model performance table ─── */
+.model-table{width:100%;border-collapse:collapse;font-size:.86rem}
+.model-table th{text-align:center;padding:.5rem .8rem;background:var(--navy);color:#fff;font-weight:600;font-size:.78rem}
+.model-table td{padding:.5rem .8rem;border-bottom:1px solid var(--border);text-align:center}
+.model-table tr:hover td{background:#F9FAFB}
+.model-table .best{color:var(--green);font-weight:700}
+.cv-box{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:.8rem 1rem;
+        font-size:.86rem;color:#1E40AF;margin-top:.6rem}
+
+/* ─── Loading spinner ─── */
+.spinner{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);
+         border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+.spinner-dark{display:inline-block;width:18px;height:18px;border:2.5px solid rgba(37,99,235,.2);
+              border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── Alert ─── */
+.alert{padding:.75rem 1rem;border-radius:8px;font-size:.85rem;margin-bottom:1rem}
+.alert-success{background:#DCFCE7;color:#15803D;border:1px solid #BBF7D0}
+.alert-error{background:#FEE2E2;color:#B91C1C;border:1px solid #FCA5A5}
+.alert-info{background:#DBEAFE;color:#1E40AF;border:1px solid #BFDBFE}
+.alert-warning{background:#FEF9C3;color:#A16207;border:1px solid #FDE68A}
+
+/* ─── Score bars ─── */
+.score-bars{display:flex;flex-direction:column;gap:.5rem}
+.score-bar-row{display:flex;align-items:center;gap:.8rem}
+.score-bar-label{width:110px;font-size:.78rem;font-weight:500;color:var(--text);flex-shrink:0}
+.score-bar-track{flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:4px;transition:width .6s ease;background:var(--blue)}
+.score-bar-fill.high{background:var(--green)}.score-bar-fill.mid{background:var(--amber)}.score-bar-fill.low{background:var(--red)}
+.score-bar-val{font-size:.78rem;font-weight:700;color:var(--muted);width:35px;text-align:right}
+
+/* ─── Result tabs ─── */
+.result-tabs{display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.2rem}
+.result-tab{padding:.6rem 1.2rem;font-size:.85rem;font-weight:500;color:var(--muted);
+            cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.result-tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.result-tab-content{display:none}.result-tab-content.active{display:block}
+
+/* ─── Tags ─── */
+.tag{display:inline-block;padding:.2rem .6rem;border-radius:12px;font-size:.72rem;font-weight:600}
+.tag-green{background:#DCFCE7;color:#15803D}.tag-blue{background:#DBEAFE;color:#1E40AF}
+.tag-amber{background:#FEF9C3;color:#A16207}
+
+@media(max-width:900px){
+  .analyser-layout{grid-template-columns:1fr}
+  .form-card{position:static}
+  .charts-grid{grid-template-columns:1fr}
+  .charts-grid.three{grid-template-columns:1fr}
+  .scraper-grid{grid-template-columns:1fr}
+  .kpi-grid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+}
+</style>
+</head>
+<body>
+
+<!-- ─── Nav ─── -->
+<nav>
+  <div class="nav-brand">Airbnb<span>Edge</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">📊 Market Dashboard</button>
+    <button class="nav-tab" onclick="showPage('complex')">🧠 Complex Analysis</button>
+    <button class="nav-tab" onclick="showPage('analyser')">🏠 Property Analyser</button>
+    <button class="nav-tab" onclick="showPage('scraper')">🔍 Scraper &amp; Upload</button>
+  </div>
+  <div class="nav-right">
+    <span class="custom-banner" id="customBanner">Custom Dataset Active</span>
+    <select class="city-selector" id="citySelect" onchange="switchCity(this.value)">
+      <option value="bristol">Bristol</option>
+      <option value="london">London</option>
+      <option value="edinburgh">Edinburgh</option>
+      <option value="manchester">Manchester</option>
+    </select>
+    <div class="nav-status">
+      <div class="status-dot loading" id="statusDot"></div>
+      <span id="statusText">Loading...</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE 1: MARKET DASHBOARD
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+<div class="container">
+  <div style="margin-bottom:1.2rem;display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:.5rem">
+    <div>
+      <h1 style="font-size:1.35rem;font-weight:700;color:var(--navy)" id="dashTitle">Bristol Airbnb Market Dashboard</h1>
+      <p style="color:var(--muted);font-size:.84rem;margin-top:.2rem" id="dashSubtitle">Loading data…</p>
+    </div>
+  </div>
+
+  <!-- ── Key Metrics ── -->
+  <div class="section-heading">Key Metrics</div>
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi-card"><div class="kpi-val" id="kpi_total_listings">—</div><div class="kpi-lbl">Total Listings</div></div>
+    <div class="kpi-card blue"><div class="kpi-val" id="kpi_median_price">—</div><div class="kpi-lbl">Median Price/Night</div></div>
+    <div class="kpi-card amber"><div class="kpi-val" id="kpi_median_revenue">—</div><div class="kpi-lbl">Median Annual Revenue</div></div>
+    <div class="kpi-card teal"><div class="kpi-val" id="kpi_mean_occupancy">—</div><div class="kpi-lbl">Avg Occupancy Days</div></div>
+    <div class="kpi-card green"><div class="kpi-val" id="kpi_superhost_pct">—</div><div class="kpi-lbl">Superhost %</div></div>
+    <div class="kpi-card"><div class="kpi-val" id="kpi_instant_book_pct">—</div><div class="kpi-lbl">Instant Book %</div></div>
+    <div class="kpi-card blue"><div class="kpi-val" id="kpi_avg_rating">—</div><div class="kpi-lbl">Avg Rating</div></div>
+    <div class="kpi-card amber"><div class="kpi-val" id="kpi_top_neighbourhood" style="font-size:.95rem">—</div><div class="kpi-lbl">Top Neighbourhood</div></div>
+    <div class="kpi-card green"><div class="kpi-val" id="kpi_opt_price">—</div><div class="kpi-lbl">Optimal Price</div></div>
+    <div class="kpi-card teal"><div class="kpi-val" id="kpi_entire_home_pct">—</div><div class="kpi-lbl">Entire Home %</div></div>
+    <div class="kpi-card red"><div class="kpi-val" id="kpi_median_revpar">—</div><div class="kpi-lbl">Median RevPAR</div></div>
+    <div class="kpi-card"><div class="kpi-val" id="kpi_avg_min_nights">—</div><div class="kpi-lbl">Avg Min Nights</div></div>
+  </div>
+
+  <!-- ── Location & Pricing ── -->
+  <div class="section-heading">Location &amp; Pricing</div>
+  <div class="charts-grid" style="grid-template-columns:1.4fr 1fr">
+    <div class="chart-card"><div id="chartNeighbourhoodRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartNeighbourhoodScatter" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Price & Revenue ── -->
+  <div class="section-heading">Price &amp; Revenue Distribution</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartPriceDist" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRevenueDist" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartPriceByBedrooms" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRevenueByBedrooms" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Property & Room Types ── -->
+  <div class="section-heading">Property &amp; Room Types</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartPropertyTypeRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRoomTypeBreakdown" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Occupancy & Availability ── -->
+  <div class="section-heading">Occupancy &amp; Availability</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartOccupancyDist" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartAvailabilityRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartMinNightsRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:.84rem;min-height:200px">
+      Min nights bucketed into: 1 night, 2-3, 4-7, 8+ and compared against median revenue.
+    </div>
+  </div>
+
+  <!-- ── Host Quality Levers ── -->
+  <div class="section-heading">Host Quality Levers</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartSuperhostImpact" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartResponseTimeRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Reviews & Quality ── -->
+  <div class="section-heading">Reviews &amp; Quality</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartReviewHeatmap" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRatingRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Amenities ── -->
+  <div class="section-heading">Amenities Impact</div>
+  <div class="charts-grid single">
+    <div class="chart-card"><div id="chartAmenityImpact" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Host Experience ── -->
+  <div class="section-heading">Host Experience</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartHostExperienceRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRevParNeighbourhoodMarket" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+</div><!-- /container -->
+</div><!-- /page-dashboard -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE 2: COMPLEX ANALYSIS
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-complex">
+<div class="container">
+  <div style="margin-bottom:1.2rem">
+    <h1 style="font-size:1.35rem;font-weight:700;color:var(--navy)">Complex ML Analysis</h1>
+    <p style="color:var(--muted);font-size:.84rem;margin-top:.2rem" id="complexSubtitle">Gradient Boosting, Random Forest, Linear Regression &amp; Ridge — feature engineering, clustering, PDP</p>
+  </div>
+
+  <!-- ── Model Performance ── -->
+  <div class="section-heading">Model Performance</div>
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="section-heading" style="font-size:.85rem">Model Scores</div>
+      <table class="model-table" id="modelTable">
+        <thead><tr><th>Model</th><th>R²</th><th>MAE (£/yr)</th></tr></thead>
+        <tbody><tr><td colspan="3" style="color:var(--muted);text-align:center;padding:1.5rem">Loading...</td></tr></tbody>
+      </table>
+      <div class="cv-box" id="cvBox" style="display:none"></div>
+    </div>
+    <div class="chart-card"><div id="chartModelComparison" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Feature Importance ── -->
+  <div class="section-heading">Feature Importance</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartGbmImportance" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartRfImportance" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Revenue Drivers ── -->
+  <div class="section-heading">Revenue Drivers</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartPricingCurve" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartCorrHeatmap" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Partial Dependence ── -->
+  <div class="section-heading">Partial Dependence Plots</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartPdpAccommodates" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartPdpAmenities" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── Market Segmentation ── -->
+  <div class="section-heading">Market Segmentation (K-Means)</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div id="chartClusterRevenue" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+    <div class="chart-card"><div id="chartClusterScatter" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+  <!-- ── RevPAR Analysis ── -->
+  <div class="section-heading">RevPAR Analysis</div>
+  <div class="charts-grid single">
+    <div class="chart-card"><div id="chartRevParNeighbourhood" class="chart-loading"><span class="spinner-dark"></span> Loading…</div></div>
+  </div>
+
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE 3: PROPERTY ANALYSER
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-analyser">
+<div class="container">
+  <div class="analyser-layout">
+
+    <!-- LEFT: FORM -->
+    <div class="form-card">
+      <div class="form-header">
+        <h2>Property Details</h2>
+        <p>Fill in your property — or auto-populate from the Scraper tab</p>
+      </div>
+      <div class="form-body">
+        <form id="propertyForm">
+
+          <!-- Location & Type -->
+          <div class="form-section">
+            <div class="form-section-title">Location &amp; Property Type</div>
+            <div class="form-row single">
+              <div><label>Neighbourhood</label>
+                <select id="f_neighbourhood" name="neighbourhood">
+                  <option value="Central">Central</option>
+                </select></div>
+            </div>
+            <div class="form-row single">
+              <div><label>Property Type</label>
+                <select id="f_property_type" name="property_type">
+                  <option>Entire home</option>
+                  <option>Entire rental unit</option>
+                  <option>Entire condo</option>
+                  <option>Entire townhouse</option>
+                  <option>Entire serviced apartment</option>
+                  <option>Private room in home</option>
+                  <option>Private room in rental unit</option>
+                  <option>Hotel room</option>
+                  <option>Shared room</option>
+                </select></div>
+            </div>
+            <div class="form-row">
+              <div><label>Entire Home/Apt?</label>
+                <select id="f_is_entire_home">
+                  <option value="1">Yes — Entire Home</option>
+                  <option value="0">No — Private/Shared</option>
+                </select></div>
+              <div><label>Accommodates</label>
+                <input type="number" id="f_accommodates" value="4" min="1" max="16"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Bedrooms</label>
+                <input type="number" id="f_bedrooms" value="2" min="0" max="10" step="0.5"/></div>
+              <div><label>Beds</label>
+                <input type="number" id="f_beds" value="2" min="1" max="16"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Bathrooms</label>
+                <input type="number" id="f_bathrooms" value="1" min="0.5" step="0.5"/></div>
+              <div><label>Min Nights</label>
+                <input type="number" id="f_minimum_nights" value="2" min="1"/></div>
+            </div>
+          </div>
+
+          <!-- Pricing & Availability -->
+          <div class="form-section">
+            <div class="form-section-title">Pricing &amp; Availability</div>
+            <div class="form-row">
+              <div><label>Nightly Price (£)</label>
+                <input type="number" id="f_nightly_price" value="100" min="10"/></div>
+              <div><label>Days Available/Year</label>
+                <input type="number" id="f_days_available_year" value="200" min="0" max="365"/></div>
+            </div>
+          </div>
+
+          <!-- Host Profile -->
+          <div class="form-section">
+            <div class="form-section-title">Host Profile</div>
+            <div class="form-row">
+              <div><label>Superhost?</label>
+                <select id="f_is_superhost">
+                  <option value="0">No</option>
+                  <option value="1">Yes</option>
+                </select></div>
+              <div><label>Instant Bookable?</label>
+                <select id="f_instant_bookable">
+                  <option value="0">No</option>
+                  <option value="1">Yes</option>
+                </select></div>
+            </div>
+            <div class="form-row">
+              <div><label>Response Time</label>
+                <select id="f_host_response_time">
+                  <option value="within an hour">Within an hour</option>
+                  <option value="within a few hours" selected>Within a few hours</option>
+                  <option value="within a day">Within a day</option>
+                  <option value="a few days or more">A few days or more</option>
+                </select></div>
+              <div><label>Response Rate (%)</label>
+                <input type="number" id="f_host_response_rate" value="90" min="0" max="100"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Years Experience</label>
+                <input type="number" id="f_host_years_experience" value="1" min="0" step="0.5"/></div>
+              <div><label>Total Listings Count</label>
+                <input type="number" id="f_host_listings_count" value="1" min="1"/></div>
+            </div>
+          </div>
+
+          <!-- Reviews -->
+          <div class="form-section">
+            <div class="form-section-title">Review Scores</div>
+            <div class="form-row">
+              <div><label>Overall Rating</label>
+                <input type="number" id="f_review_scores_rating" value="4.5" min="1" max="5" step="0.1"/></div>
+              <div><label>Cleanliness</label>
+                <input type="number" id="f_review_scores_cleanliness" value="4.5" min="1" max="5" step="0.1"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Location</label>
+                <input type="number" id="f_review_scores_location" value="4.5" min="1" max="5" step="0.1"/></div>
+              <div><label>Value</label>
+                <input type="number" id="f_review_scores_value" value="4.3" min="1" max="5" step="0.1"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Number of Reviews</label>
+                <input type="number" id="f_number_of_reviews" value="0" min="0"/></div>
+              <div><label>Reviews/Month</label>
+                <input type="number" id="f_reviews_per_month" value="2.0" min="0" step="0.1"/></div>
+            </div>
+          </div>
+
+          <!-- Amenities -->
+          <div class="form-section">
+            <div class="form-section-title">Amenities</div>
+            <div class="amenity-grid" id="amenityGrid"></div>
+          </div>
+
+          <!-- Costs -->
+          <div class="form-section">
+            <div class="form-section-title">Annual Costs</div>
+            <div class="form-row">
+              <div><label>Mortgage/Rent (£/mo)</label><input type="number" id="f_monthly_mortgage_or_rent" value="0" min="0"/></div>
+              <div><label>Bills (£/mo)</label><input type="number" id="f_monthly_bills" value="150" min="0"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>STL Insurance (£/mo)</label><input type="number" id="f_monthly_insurance" value="50" min="0"/></div>
+              <div><label>Cleaning/Stay (£)</label><input type="number" id="f_cleaning_cost_per_stay" value="50" min="0"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Consumables/Stay (£)</label><input type="number" id="f_consumables_per_stay" value="15" min="0"/></div>
+              <div><label>Annual Maintenance (£)</label><input type="number" id="f_annual_maintenance" value="400" min="0"/></div>
+            </div>
+            <div class="form-row">
+              <div><label>Setup Cost (£)</label><input type="number" id="f_initial_setup_cost" value="1500" min="0"/></div>
+              <div><label>Avg Stay Length (nights)</label><input type="number" id="f_avg_stay_length_nights" value="3" min="1"/></div>
+            </div>
+          </div>
+
+          <div id="analyseAlert"></div>
+          <button type="submit" class="btn btn-primary btn-block" id="analyseBtn">
+            <span id="analyseBtnText">Analyse Property</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="results-panel" id="resultsPanel">
+      <div class="results-placeholder" id="resultsPlaceholder">
+        <div class="icon">📈</div>
+        <h3 style="font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:.5rem">Ready to Analyse</h3>
+        <p style="font-size:.88rem">Fill in your property details and click <b>Analyse Property</b> to get your full P&amp;L, score, and optimisation roadmap.</p>
+        <p style="font-size:.8rem;margin-top:.5rem;color:var(--muted)">Or use the <b>Scraper &amp; Upload tab</b> to auto-fill from an Airbnb URL.</p>
+      </div>
+      <div id="resultsContent" style="display:none"></div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     PAGE 4: SCRAPER & UPLOAD
+══════════════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-scraper">
+<div class="container">
+  <div style="margin-bottom:1.2rem">
+    <h1 style="font-size:1.35rem;font-weight:700;color:var(--navy)">Scraper &amp; Upload</h1>
+    <p style="color:var(--muted);font-size:.84rem;margin-top:.2rem">Auto-populate your analyser from an Airbnb listing URL, or upload your own Inside Airbnb CSV dataset.</p>
+  </div>
+
+  <div class="scraper-grid">
+
+    <!-- LEFT: Listing Scraper -->
+    <div class="scraper-card">
+      <h2>🔍 Listing Scraper</h2>
+      <p>Paste any Airbnb listing URL to auto-populate the Property Analyser with scraped data.</p>
+      <div class="url-input-row">
+        <input type="url" id="scrapeUrl" placeholder="https://www.airbnb.co.uk/rooms/12345" />
+        <button class="btn btn-primary" id="scrapeBtn" onclick="doScrape()">
+          <span id="scrapeBtnText">Scrape</span>
+        </button>
+      </div>
+      <div id="scrapeStatus"></div>
+
+      <div class="scrape-result" id="scrapeResult">
+        <div class="section-heading" style="font-size:.85rem">Scraped Fields</div>
+        <div class="field-preview" id="fieldPreview"></div>
+        <div style="display:flex;gap:.7rem;margin-top:.8rem">
+          <button class="btn btn-teal" onclick="loadScrapedIntoForm()">Load into Analyser</button>
+          <button class="btn btn-secondary" onclick="clearScrape()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: CSV Upload -->
+    <div class="scraper-card">
+      <h2>📤 Upload Your Own Dataset</h2>
+      <p>Upload any Inside Airbnb CSV file (bristol.csv, london.csv, etc.) to run the full analysis pipeline on your data.</p>
+
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvFileInput').click()">
+        <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleFileSelect(this)"/>
+        <div class="icon">📁</div>
+        <p><strong>Click to browse</strong> or drag &amp; drop your CSV file</p>
+        <p class="hint">Accepts: Inside Airbnb listings.csv format</p>
+        <p class="hint" id="selectedFileName" style="margin-top:.4rem;color:var(--blue);font-weight:500"></p>
+      </div>
+
+      <div id="uploadAlert" style="margin-top:.8rem"></div>
+      <div class="progress-bar" id="uploadProgressBar">
+        <div class="progress-fill" id="uploadProgressFill"></div>
+      </div>
+
+      <button class="btn btn-primary btn-block" id="uploadBtn" onclick="doUpload()" style="margin-top:.8rem;display:none">
+        <span id="uploadBtnText">Upload &amp; Analyse</span>
+      </button>
+
+      <div class="upload-summary" id="uploadSummary">
+        <h4>✅ Custom Dataset Loaded!</h4>
+        <div class="upload-stat">Total Listings: <strong id="us_total">—</strong></div>
+        <div class="upload-stat">Median Price/Night: <strong id="us_price">—</strong></div>
+        <div class="upload-stat">Median Annual Revenue: <strong id="us_revenue">—</strong></div>
+        <div class="upload-stat">Top Neighbourhoods: <strong id="us_hoods">—</strong></div>
+        <div style="display:flex;gap:.7rem;margin-top:1rem;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="switchCity('custom');showPage('dashboard')">📊 View in Dashboard</button>
+          <button class="btn btn-teal" onclick="switchCity('custom');showPage('analyser')">🏠 Use in Analyser</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════════════ -->
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+let activeCity = "bristol";
+let scrapedData = null;
+let marketLoaded = {};   // city -> bool
+let complexLoaded = {};  // city -> bool
+let selectedFile = null;
+
+const AMENITY_LABELS = {
+  "amen_hot_tub":"Hot Tub","amen_pool":"Pool","amen_gym":"Gym",
+  "amen_ev_charger":"EV Charger","amen_sauna":"Sauna","amen_fireplace":"Fireplace",
+  "amen_dedicated_workspace":"Workspace","amen_netflix":"Netflix","amen_wifi":"WiFi",
+  "amen_free_parking":"Free Parking","amen_air_conditioning":"AC",
+  "amen_breakfast":"Breakfast","amen_self_check-in":"Self Check-in",
+  "amen_washer":"Washer","amen_dryer":"Dryer","amen_dishwasher":"Dishwasher",
+  "amen_espresso_machine":"Espresso","amen_piano":"Piano",
+  "amen_baby_monitor":"Baby Monitor","amen_elevator":"Elevator",
+  "amen_waterfront":"Waterfront","amen_garden":"Garden",
+  "amen_balcony":"Balcony","amen_harbor_view":"Harbour View",
+};
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  buildAmenityGrid();
+  loadNeighbourhoods("bristol");
+  loadMarket("bristol");
+});
+
+window.addEventListener("resize", () => {
+  document.querySelectorAll(".js-plotly-plot").forEach(el => {
+    try { Plotly.Plots.resize(el); } catch(e) {}
+  });
+});
+
+// ─── Page Navigation ──────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-tab").forEach(t => t.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
+  const tabs = document.querySelectorAll(".nav-tab");
+  const pageOrder = ["dashboard","complex","analyser","scraper"];
+  const idx = pageOrder.indexOf(name);
+  if (idx >= 0) tabs[idx].classList.add("active");
+
+  // Lazy load complex analysis
+  if (name === "complex" && !complexLoaded[activeCity]) {
+    loadComplex(activeCity);
+  }
+}
+
+// ─── City Management ──────────────────────────────────────────────────────────
+function switchCity(city) {
+  activeCity = city;
+  document.getElementById("citySelect").value = city;
+  // Reset loaded flags for fresh re-render
+  marketLoaded[city] = false;
+  complexLoaded[city] = false;
+
+  // Reload visible page
+  const activePage = document.querySelector(".page.active");
+  if (activePage.id === "page-dashboard") {
+    loadMarket(city);
+  } else if (activePage.id === "page-complex") {
+    loadComplex(city);
+  }
+  loadNeighbourhoods(city);
+}
+
+function addCustomToSelector() {
+  const sel = document.getElementById("citySelect");
+  if (!Array.from(sel.options).find(o => o.value === "custom")) {
+    const opt = document.createElement("option");
+    opt.value = "custom"; opt.textContent = "Custom Dataset";
+    sel.appendChild(opt);
+  }
+  document.getElementById("customBanner").classList.add("visible");
+}
+
+// ─── Market Dashboard ─────────────────────────────────────────────────────────
+async function loadMarket(city) {
+  setStatus("loading", "Loading " + city + "...");
+  setChartLoading("dashboard");
+  try {
+    const r = await fetch(`/api/market?city=${city}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+
+    renderKPIs(data.kpis, city);
+    renderMarketCharts(data.charts);
+    marketLoaded[city] = true;
+
+    const n = data.kpis.total_listings.toLocaleString();
+    document.getElementById("dashTitle").textContent = city.charAt(0).toUpperCase()+city.slice(1)+" Airbnb Market Dashboard";
+    document.getElementById("dashSubtitle").textContent = `${n} listings · Inside Airbnb data`;
+    setStatus("ready", "Model ready");
+  } catch(e) {
+    setStatus("error", "Load error");
+    console.error(e);
+    showDashError(e.message);
+  }
+}
+
+function setChartLoading(page) {
+  if (page === "dashboard") {
+    const ids = ["chartNeighbourhoodRevenue","chartNeighbourhoodScatter","chartPriceDist",
+      "chartRevenueDist","chartPriceByBedrooms","chartRevenueByBedrooms",
+      "chartPropertyTypeRevenue","chartRoomTypeBreakdown","chartOccupancyDist",
+      "chartAvailabilityRevenue","chartMinNightsRevenue","chartSuperhostImpact",
+      "chartResponseTimeRevenue","chartReviewHeatmap","chartRatingRevenue",
+      "chartAmenityImpact","chartHostExperienceRevenue","chartRevParNeighbourhoodMarket"];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div class="chart-loading"><span class="spinner-dark"></span> Loading…</div>';
+    });
+  }
+}
+
+function renderKPIs(kpis, city) {
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set("kpi_total_listings",   kpis.total_listings.toLocaleString());
+  set("kpi_median_price",     `£${kpis.median_price.toFixed(0)}`);
+  set("kpi_median_revenue",   `£${Math.round(kpis.median_revenue).toLocaleString()}`);
+  set("kpi_mean_occupancy",   `${kpis.mean_occupancy.toFixed(0)} days`);
+  set("kpi_superhost_pct",    `${kpis.superhost_pct}%`);
+  set("kpi_instant_book_pct", `${kpis.instant_book_pct}%`);
+  set("kpi_avg_rating",       kpis.avg_rating ? `${kpis.avg_rating.toFixed(2)} ★` : "—");
+  set("kpi_top_neighbourhood",kpis.top_neighbourhood || "—");
+  set("kpi_opt_price",        `£${kpis.opt_price.toFixed(0)}`);
+  set("kpi_entire_home_pct",  `${kpis.entire_home_pct}%`);
+  set("kpi_median_revpar",    `£${kpis.median_revpar.toFixed(1)}`);
+  set("kpi_avg_min_nights",   `${kpis.avg_min_nights.toFixed(1)} nights`);
+}
+
+function renderMarketCharts(c) {
+  const plot = (id, key, height) => {
+    if (!c[key]) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = "";
+    const layout = Object.assign({}, c[key].layout);
+    if (height) layout.height = height;
+    layout.autosize = true;
+    Plotly.newPlot(id, c[key].data, layout, {responsive:true,displayModeBar:false,scrollZoom:false});
+  };
+  plot("chartNeighbourhoodRevenue",   "neighbourhood_revenue",   550);
+  plot("chartNeighbourhoodScatter",   "neighbourhood_scatter",   480);
+  plot("chartPriceDist",              "price_dist",              380);
+  plot("chartRevenueDist",            "revenue_dist",            380);
+  plot("chartPriceByBedrooms",        "price_by_bedrooms",       350);
+  plot("chartRevenueByBedrooms",      "revenue_by_bedrooms",     350);
+  plot("chartPropertyTypeRevenue",    "property_type_revenue",   420);
+  plot("chartRoomTypeBreakdown",      "room_type_breakdown",     380);
+  plot("chartOccupancyDist",          "occupancy_dist",          360);
+  plot("chartAvailabilityRevenue",    "availability_revenue",    350);
+  plot("chartMinNightsRevenue",       "min_nights_revenue",      350);
+  plot("chartSuperhostImpact",        "superhost_impact",        360);
+  plot("chartResponseTimeRevenue",    "response_time_revenue",   360);
+  plot("chartReviewHeatmap",          "review_heatmap",          440);
+  plot("chartRatingRevenue",          "rating_revenue",          360);
+  plot("chartAmenityImpact",          "amenity_impact",          500);
+  plot("chartHostExperienceRevenue",  "host_experience_revenue", 380);
+  plot("chartRevParNeighbourhoodMarket","revpar_neighbourhood",  480);
+}
+
+function showDashError(msg) {
+  ["chartNeighbourhoodRevenue","chartPriceDist"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div class="chart-error">Error: ${msg}</div>`;
+  });
+}
+
+// ─── Complex Analysis ─────────────────────────────────────────────────────────
+async function loadComplex(city) {
+  try {
+    const r = await fetch(`/api/complex?city=${city}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById("complexSubtitle").textContent =
+      `${city.charAt(0).toUpperCase()+city.slice(1)} — GBM CV R²: ${data.cv_scores.mean.toFixed(3)} ± ${data.cv_scores.std.toFixed(3)}`;
+
+    renderModelTable(data.model_scores, data.cv_scores);
+    renderComplexCharts(data.charts);
+    complexLoaded[city] = true;
+  } catch(e) {
+    console.error(e);
+    document.getElementById("complexSubtitle").textContent = "Error loading: " + e.message;
+  }
+}
+
+function renderModelTable(scores, cv) {
+  const tbody = document.querySelector("#modelTable tbody");
+  const models = Object.keys(scores);
+  const bestR2 = Math.max(...models.map(m => scores[m].r2));
+  const bestMAE = Math.min(...models.map(m => scores[m].mae));
+  tbody.innerHTML = models.map(m => `
+    <tr>
+      <td style="font-weight:600;text-align:left">${m}</td>
+      <td class="${scores[m].r2 === bestR2 ? 'best' : ''}">${scores[m].r2.toFixed(4)}</td>
+      <td class="${scores[m].mae === bestMAE ? 'best' : ''}">£${scores[m].mae.toLocaleString()}</td>
+    </tr>`).join("");
+  const cvBox = document.getElementById("cvBox");
+  cvBox.style.display = "block";
+  cvBox.innerHTML = `<strong>GBM 5-fold CV:</strong> R² = ${cv.mean.toFixed(4)} ± ${cv.std.toFixed(4)}`;
+}
+
+function renderComplexCharts(c) {
+  const plot = (id, key, height) => {
+    if (!c[key]) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = "";
+    const layout = Object.assign({}, c[key].layout);
+    if (height) layout.height = height;
+    layout.autosize = true;
+    Plotly.newPlot(id, c[key].data, layout, {responsive:true,displayModeBar:false,scrollZoom:false});
+  };
+  plot("chartModelComparison",    "model_comparison",  360);
+  plot("chartGbmImportance",      "gbm_importance",    500);
+  plot("chartRfImportance",       "rf_importance",     500);
+  plot("chartPricingCurve",       "pricing_curve",     400);
+  plot("chartCorrHeatmap",        "corr_heatmap",      500);
+  plot("chartPdpAccommodates",    "pdp_accommodates",  360);
+  plot("chartPdpAmenities",       "pdp_amenities",     360);
+  plot("chartClusterRevenue",     "cluster_revenue",   380);
+  plot("chartClusterScatter",     "cluster_scatter",   420);
+  plot("chartRevParNeighbourhood","revpar_neighbourhood",480);
+}
+
+// ─── Status ───────────────────────────────────────────────────────────────────
+function setStatus(state, msg) {
+  const dot  = document.getElementById("statusDot");
+  const text = document.getElementById("statusText");
+  dot.className = "status-dot";
+  if (state === "ready")   dot.classList.add("ready");
+  if (state === "loading") dot.classList.add("loading");
+  text.textContent = msg;
+}
+
+// ─── Neighbourhoods ───────────────────────────────────────────────────────────
+async function loadNeighbourhoods(city) {
+  try {
+    const r = await fetch(`/api/neighbourhoods?city=${city}`);
+    const hoods = await r.json();
+    const sel = document.getElementById("f_neighbourhood");
+    const current = sel.value;
+    sel.innerHTML = hoods.map(h => `<option value="${h}">${h}</option>`).join("");
+    if (hoods.includes(current)) sel.value = current;
+  } catch(e) { console.warn("Could not load neighbourhoods:", e); }
+}
+
+// ─── Property Analyser ────────────────────────────────────────────────────────
+function buildAmenityGrid() {
+  const grid = document.getElementById("amenityGrid");
+  grid.innerHTML = Object.entries(AMENITY_LABELS).map(([key, lbl]) => `
+    <label class="amenity-item" id="lbl_${key}" onclick="toggleAmenity(this, '${key}')">
+      <input type="checkbox" id="${key}" name="${key}"/>
+      ${lbl}
+    </label>`).join("");
+}
+
+function toggleAmenity(label, key) {
+  const cb = document.getElementById(key);
+  cb.checked = !cb.checked;
+  label.classList.toggle("checked", cb.checked);
+}
+
+document.getElementById("propertyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn  = document.getElementById("analyseBtn");
+  const text = document.getElementById("analyseBtnText");
+  btn.disabled = true;
+  text.innerHTML = `<span class="spinner"></span> Analysing...`;
+  try {
+    const payload = collectFormData();
+    const r = await fetch(`/api/analyse?city=${activeCity}`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    renderResults(data, payload);
+  } catch(err) {
+    showAlert("analyseAlert", "Analysis failed: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    text.textContent = "Analyse Property";
+  }
+});
+
+function collectFormData() {
+  const g = id => document.getElementById(id);
+  const prop = {
+    neighbourhood:            g("f_neighbourhood").value,
+    property_type:            g("f_property_type").value,
+    is_entire_home:           parseInt(g("f_is_entire_home").value),
+    bedrooms:                 parseFloat(g("f_bedrooms").value),
+    beds:                     parseFloat(g("f_beds").value),
+    bathrooms:                parseFloat(g("f_bathrooms").value),
+    accommodates:             parseFloat(g("f_accommodates").value),
+    nightly_price:            parseFloat(g("f_nightly_price").value),
+    minimum_nights:           parseFloat(g("f_minimum_nights").value),
+    days_available_year:      parseFloat(g("f_days_available_year").value),
+    is_superhost:             parseInt(g("f_is_superhost").value),
+    instant_bookable:         parseInt(g("f_instant_bookable").value),
+    host_response_time:       g("f_host_response_time").value,
+    host_response_rate:       parseFloat(g("f_host_response_rate").value) / 100,
+    host_years_experience:    parseFloat(g("f_host_years_experience").value),
+    host_listings_count:      parseFloat(g("f_host_listings_count").value),
+    host_acceptance_rate:     0.85,
+    review_scores_rating:     parseFloat(g("f_review_scores_rating").value),
+    review_scores_cleanliness:parseFloat(g("f_review_scores_cleanliness").value),
+    review_scores_location:   parseFloat(g("f_review_scores_location").value),
+    review_scores_value:      parseFloat(g("f_review_scores_value").value),
+    number_of_reviews:        parseFloat(g("f_number_of_reviews").value),
+    reviews_per_month:        parseFloat(g("f_reviews_per_month").value),
+    monthly_mortgage_or_rent: parseFloat(g("f_monthly_mortgage_or_rent").value),
+    monthly_bills:            parseFloat(g("f_monthly_bills").value),
+    monthly_insurance:        parseFloat(g("f_monthly_insurance").value),
+    cleaning_cost_per_stay:   parseFloat(g("f_cleaning_cost_per_stay").value),
+    consumables_per_stay:     parseFloat(g("f_consumables_per_stay").value),
+    annual_maintenance:       parseFloat(g("f_annual_maintenance").value),
+    initial_setup_cost:       parseFloat(g("f_initial_setup_cost").value),
+    avg_stay_length_nights:   parseFloat(g("f_avg_stay_length_nights").value),
+  };
+  Object.keys(AMENITY_LABELS).forEach(key => {
+    const el = document.getElementById(key);
+    prop[key] = el && el.checked ? 1 : 0;
+  });
+  return prop;
+}
+
+function renderResults(data, prop) {
+  document.getElementById("resultsPlaceholder").style.display = "none";
+  const panel = document.getElementById("resultsContent");
+  panel.style.display = "block";
+
+  const pl    = data.pl_current;
+  const plo   = data.pl_optimised;
+  const score = data.score;
+  const catCls = score.category.toLowerCase();
+  const netColor  = pl.net_profit  >= 0 ? "var(--green)" : "var(--red)";
+  const netColorO = plo.net_profit >= 0 ? "var(--green)" : "var(--red)";
+
+  const scoreBars = Object.entries(score.scores).map(([dim, val]) => {
+    const pct = (val/20)*100;
+    const cls = pct>=75?"high":pct>=50?"mid":"low";
+    return `<div class="score-bar-row">
+      <div class="score-bar-label">${dim}</div>
+      <div class="score-bar-track"><div class="score-bar-fill ${cls}" style="width:${pct}%"></div></div>
+      <div class="score-bar-val">${val}/20</div>
+    </div>`;
+  }).join("");
+
+  const plRows = [
+    ["Gross Revenue",       pl.gross_revenue,   plo.gross_revenue,   false],
+    ["Airbnb Host Fee (3%)",pl.airbnb_fee,       plo.airbnb_fee,      true],
+    ["Mortgage / Rent",     pl.mortgage_rent,    plo.mortgage_rent,   true],
+    ["Bills & Utilities",   pl.bills,            plo.bills,           true],
+    ["Insurance",           pl.insurance,        plo.insurance,       true],
+    ["Cleaning",            pl.cleaning,         plo.cleaning,        true],
+    ["Consumables",         pl.consumables,      plo.consumables,     true],
+    ["Maintenance",         pl.maintenance,      plo.maintenance,     true],
+    ["Total Costs",         pl.total_costs,      plo.total_costs,     true, "total-row"],
+  ];
+
+  const plTableRows = plRows.map(([lbl, cv, ov, isCost, rowCls=""]) => `
+    <tr class="${rowCls}">
+      <td>${lbl}</td>
+      <td class="num">${isCost?"-":""}£${Math.abs(cv).toLocaleString()}</td>
+      <td class="num">${isCost?"-":""}£${Math.abs(ov).toLocaleString()}</td>
+    </tr>`).join("");
+
+  const profitClass  = pl.net_profit  >= 0 ? "profit-row" : "profit-row loss";
+  const profitClassO = plo.net_profit >= 0 ? "" : "loss";
+  const upliftPct = pl.net_profit !== 0 ?
+    Math.round((plo.net_profit - pl.net_profit) / Math.abs(pl.net_profit) * 100) : 0;
+
+  panel.innerHTML = `
+    <div class="results-header">
+      <div>
+        <h2>${prop.property_type} · ${prop.bedrooms}BD/${prop.bathrooms}BA · ${prop.neighbourhood}</h2>
+        <div style="margin-top:.5rem;display:flex;align-items:center;gap:.8rem;flex-wrap:wrap">
+          <span class="score-badge ${catCls}">Score: ${score.total}/140 — ${score.category}</span>
+          <span class="tag tag-blue">${data.opportunities.length} improvements found</span>
+          ${data.opt_price ? `<span class="tag tag-amber">Optimal price: £${data.opt_price}/night</span>` : ""}
+        </div>
+      </div>
+      <div class="rev-numbers">
+        <div class="rev-item">
+          <div class="lbl">Current Revenue</div>
+          <div class="val">£${Math.round(data.current_revenue).toLocaleString()}/yr</div>
+        </div>
+        <div class="rev-item">
+          <div class="lbl">Optimised Revenue</div>
+          <div class="val green">£${Math.round(data.optimised_revenue).toLocaleString()}/yr</div>
+        </div>
+        <div class="rev-item">
+          <div class="lbl">Net Profit</div>
+          <div class="val" style="color:${netColor}">£${Math.round(pl.net_profit).toLocaleString()}</div>
+        </div>
+        <div class="rev-item">
+          <div class="lbl">Profit Margin</div>
+          <div class="val" style="color:${netColor}">${pl.profit_margin_pct.toFixed(1)}%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-tabs">
+      <div class="result-tab active" onclick="switchResultTab(this,'tab-overview')">Overview</div>
+      <div class="result-tab" onclick="switchResultTab(this,'tab-opportunities')">Opportunities</div>
+      <div class="result-tab" onclick="switchResultTab(this,'tab-pl')">P&amp;L</div>
+      <div class="result-tab" onclick="switchResultTab(this,'tab-charts')">Charts</div>
+    </div>
+
+    <!-- Tab: Overview -->
+    <div class="result-tab-content active" id="tab-overview">
+      <div class="charts-grid" style="grid-template-columns:1fr 1fr;margin-bottom:1.2rem">
+        <div class="chart-card">
+          <div class="section-heading" style="font-size:.85rem">Property Score</div>
+          <div class="score-bars">${scoreBars}</div>
+          <div style="margin-top:1rem;font-size:.82rem;color:var(--muted)">
+            Total: <strong>${score.total}/140</strong> · ${score.category}
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="section-heading" style="font-size:.85rem">Net Profit Summary</div>
+          <div style="display:flex;flex-direction:column;gap:.8rem;margin-top:.5rem">
+            <div style="padding:1rem;background:${pl.net_profit>=0?'#ECFDF5':'#FEF2F2'};border-radius:8px">
+              <div style="font-size:.75rem;color:var(--muted);font-weight:500;margin-bottom:.2rem">CURRENT NET PROFIT</div>
+              <div style="font-size:1.8rem;font-weight:700;color:${netColor}">£${Math.round(pl.net_profit).toLocaleString()}/yr</div>
+              <div style="font-size:.88rem;color:var(--muted);margin-top:.2rem">${pl.profit_margin_pct.toFixed(1)}% of total costs · ~${Math.round(pl.bookings_per_year)} bookings/yr</div>
+            </div>
+            <div style="padding:1rem;background:${plo.net_profit>=0?'#ECFDF5':'#FEF2F2'};border-radius:8px;border:2px dashed ${plo.net_profit>=0?'var(--green)':'var(--red)'}">
+              <div style="font-size:.75rem;color:var(--muted);font-weight:500;margin-bottom:.2rem">OPTIMISED NET PROFIT</div>
+              <div style="font-size:1.8rem;font-weight:700;color:${netColorO}">£${Math.round(plo.net_profit).toLocaleString()}/yr</div>
+              <div style="font-size:.88rem;color:var(--muted);margin-top:.2rem">${plo.profit_margin_pct.toFixed(1)}% of costs · Uplift: <strong style="color:var(--green)">+${upliftPct}%</strong></div>
+            </div>
+            ${prop.initial_setup_cost > 0 && pl.net_profit > 0 ?
+              `<div style="font-size:.82rem;color:var(--muted);padding:.6rem .8rem;background:var(--bg);border-radius:6px">
+                Setup cost payback: <strong>${Math.round(prop.initial_setup_cost/pl.net_profit*365)} days</strong> (${(prop.initial_setup_cost/pl.net_profit*12).toFixed(1)} months)
+              </div>` : ""}
+          </div>
+        </div>
+      </div>
+      <div id="chartScorecard" class="chart-card"></div>
+    </div>
+
+    <!-- Tab: Opportunities -->
+    <div class="result-tab-content" id="tab-opportunities">
+      <div class="chart-card" style="margin-bottom:1.2rem">
+        <div id="chartOpportunities"></div>
+      </div>
+      <div class="opp-list">
+        ${data.opportunities.map((o,i) => `
+          <div class="opp-item">
+            <div class="opp-rank">${i+1}</div>
+            <div class="opp-name">${o.lever}</div>
+            <div class="opp-uplift">+${o.uplift_pct.toFixed(1)}%</div>
+            <div class="opp-abs">£${o.uplift_abs.toLocaleString()}/yr</div>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <!-- Tab: P&L -->
+    <div class="result-tab-content" id="tab-pl">
+      <div class="chart-card" style="overflow-x:auto">
+        <table class="pl-table">
+          <thead><tr><th>Line Item</th><th class="num">Current</th><th class="num">Optimised</th></tr></thead>
+          <tbody>
+            ${plTableRows}
+            <tr class="${profitClass}">
+              <td>NET PROFIT</td>
+              <td class="num">£${Math.round(pl.net_profit).toLocaleString()}</td>
+              <td class="num ${profitClassO}">£${Math.round(plo.net_profit).toLocaleString()}</td>
+            </tr>
+            <tr style="background:#F8FAFF">
+              <td style="font-weight:600">Profit as % of Costs</td>
+              <td class="num pct-cell">${pl.profit_margin_pct.toFixed(1)}%</td>
+              <td class="num pct-cell">${plo.profit_margin_pct.toFixed(1)}%</td>
+            </tr>
+            <tr style="background:#F8FAFF">
+              <td>Est. Bookings/Year</td>
+              <td class="num">${Math.round(pl.bookings_per_year)}</td>
+              <td class="num">${Math.round(plo.bookings_per_year)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Tab: Charts -->
+    <div class="result-tab-content" id="tab-charts">
+      <div class="chart-card" style="margin-bottom:1.2rem"><div id="chartPL"></div></div>
+      <div class="chart-card"><div id="chartProfit"></div></div>
+    </div>
+  `;
+
+  if (data.charts.scorecard)
+    Plotly.newPlot("chartScorecard", data.charts.scorecard.data, data.charts.scorecard.layout, {responsive:true,displayModeBar:false});
+  if (data.charts.opportunities)
+    Plotly.newPlot("chartOpportunities", data.charts.opportunities.data, data.charts.opportunities.layout, {responsive:true,displayModeBar:false});
+
+  panel.dataset.charts = JSON.stringify(data.charts);
+  panel.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function switchResultTab(el, tabId) {
+  const resultsPanel = document.getElementById("resultsContent");
+  resultsPanel.querySelectorAll(".result-tab").forEach(t => t.classList.remove("active"));
+  resultsPanel.querySelectorAll(".result-tab-content").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+  document.getElementById(tabId).classList.add("active");
+
+  if (tabId === "tab-charts") {
+    const charts = JSON.parse(resultsPanel.dataset.charts || "{}");
+    if (charts.pl_waterfall && !document.getElementById("chartPL").children.length)
+      Plotly.newPlot("chartPL", charts.pl_waterfall.data, charts.pl_waterfall.layout, {responsive:true,displayModeBar:false});
+    if (charts.profit_summary && !document.getElementById("chartProfit").children.length)
+      Plotly.newPlot("chartProfit", charts.profit_summary.data, charts.profit_summary.layout, {responsive:true,displayModeBar:false});
+  }
+}
+
+// ─── Scraper ──────────────────────────────────────────────────────────────────
+async function doScrape() {
+  const url  = document.getElementById("scrapeUrl").value.trim();
+  const btn  = document.getElementById("scrapeBtn");
+  const text = document.getElementById("scrapeBtnText");
+  const stat = document.getElementById("scrapeStatus");
+  if (!url) { stat.innerHTML = '<div class="alert alert-error">Please enter a URL.</div>'; return; }
+
+  btn.disabled = true;
+  text.innerHTML = '<span class="spinner"></span> Scraping...';
+  stat.innerHTML = '<div class="alert alert-info">Fetching page… this may take 5–15 seconds.</div>';
+  document.getElementById("scrapeResult").classList.remove("visible");
+
+  try {
+    const r = await fetch("/api/scrape", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({url})
+    });
+    const data = await r.json();
+    if (data.error) throw new Error(data.error);
+    scrapedData = data;
+    stat.innerHTML = `<div class="alert alert-success">✅ ${data.scrape_status}</div>`;
+    renderScrapePreview(data);
+  } catch(err) {
+    stat.innerHTML = `<div class="alert alert-error">❌ ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    text.textContent = "Scrape";
+  }
+}
+
+function renderScrapePreview(data) {
+  const preview = document.getElementById("fieldPreview");
+
+  // ── Core fields ──────────────────────────────────────────────────────────
+  const r1 = v => (typeof v === "number" ? +v.toFixed(1) : v);
+  const CORE_FIELDS = [
+    ["listing_name",         "Listing Name",   v => v || "—"],
+    ["nightly_price",        "Price/Night",    v => "£" + r1(v)],
+    ["bedrooms",             "Bedrooms",       v => r1(v)],
+    ["beds",                 "Beds",           v => r1(v)],
+    ["bathrooms",            "Bathrooms",      v => r1(v)],
+    ["accommodates",         "Max Guests",     v => r1(v)],
+    ["review_scores_rating", "Rating",         v => r1(v) + " ★"],
+    ["number_of_reviews",    "Reviews",        v => v],
+    ["is_superhost",         "Superhost",      v => v ? "Yes ⭐" : "No"],
+    ["instant_bookable",     "Instant Book",   v => v ? "On ⚡" : "Off"],
+    ["minimum_nights",       "Min Nights",     v => r1(v)],
+    ["is_entire_home",       "Entire Home",    v => v ? "Yes" : "No"],
+  ];
+
+  const coreHtml = CORE_FIELDS.map(([key, lbl, fmt]) => {
+    const raw = data[key];
+    if (raw === undefined || raw === null) return "";
+    const val = fmt(raw);
+    const scraped = raw !== 0 && raw !== "" && raw !== "No" && raw !== "Off";
+    return `<div class="field-item ${scraped ? "scraped" : "default"}" style="padding:.4rem .6rem">
+      <div class="field-k" style="font-size:.65rem">${lbl}</div>
+      <div class="field-v" style="font-size:.82rem">${val}</div>
+    </div>`;
+  }).join("");
+
+  // ── Amenities grid (all 24, tick or cross) ───────────────────────────────
+  const AMENITY_DISPLAY = [
+    ["amen_wifi",                "WiFi"],
+    ["amen_free_parking",        "Free Parking"],
+    ["amen_washer",              "Washer"],
+    ["amen_dryer",               "Dryer"],
+    ["amen_dishwasher",          "Dishwasher"],
+    ["amen_air_conditioning",    "Air Con"],
+    ["amen_dedicated_workspace", "Workspace"],
+    ["amen_self_check-in",       "Self Check-in"],
+    ["amen_fireplace",           "Fireplace"],
+    ["amen_hot_tub",             "Hot Tub"],
+    ["amen_pool",                "Pool"],
+    ["amen_gym",                 "Gym"],
+    ["amen_netflix",             "Netflix/TV"],
+    ["amen_breakfast",           "Breakfast"],
+    ["amen_balcony",             "Balcony"],
+    ["amen_garden",              "Garden/Patio"],
+    ["amen_ev_charger",          "EV Charger"],
+    ["amen_sauna",               "Sauna"],
+    ["amen_elevator",            "Elevator"],
+    ["amen_espresso_machine",    "Coffee Machine"],
+    ["amen_baby_monitor",        "Baby Gear"],
+    ["amen_waterfront",          "Waterfront"],
+    ["amen_harbor_view",         "Sea/Harbour View"],
+    ["amen_piano",               "Piano"],
+  ];
+
+  const amenHtml = AMENITY_DISPLAY.map(([key, lbl]) => {
+    const val = data[key];
+    const has = val === 1 || val === true;
+    return `<div class="field-item ${has ? "scraped" : "default"}" style="opacity:${has ? 1 : 0.55}">
+      <div class="field-k">${lbl}</div>
+      <div class="field-v" style="font-size:1.2rem">${has ? "✅" : "❌"}</div>
+    </div>`;
+  }).join("");
+
+  // ── Compact amenity rows (3-col, label + icon inline) ───────────────────
+  const amenRowHtml = AMENITY_DISPLAY.map(([key, lbl]) => {
+    const has = data[key] === 1 || data[key] === true;
+    return `<div style="display:flex;align-items:center;gap:.35rem;padding:.22rem .1rem;
+                        font-size:.78rem;color:${has?"var(--text)":"var(--muted)"}">
+      <span style="font-size:.85rem">${has ? "✅" : "❌"}</span>
+      <span>${lbl}</span>
+    </div>`;
+  }).join("");
+
+  preview.innerHTML = `
+    <div style="width:100%">
+      <div style="font-size:.72rem;font-weight:700;color:var(--navy);text-transform:uppercase;
+                  letter-spacing:.5px;margin-bottom:.5rem;padding-bottom:.3rem;
+                  border-bottom:1px solid var(--border)">Property Details</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-bottom:1rem">${coreHtml}</div>
+      <div style="font-size:.72rem;font-weight:700;color:var(--navy);text-transform:uppercase;
+                  letter-spacing:.5px;margin-bottom:.5rem;padding-bottom:.3rem;
+                  border-bottom:1px solid var(--border)">Amenities</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.1rem">${amenRowHtml}</div>
+    </div>`;
+
+  document.getElementById("scrapeResult").classList.add("visible");
+}
+
+function loadScrapedIntoForm() {
+  if (!scrapedData) return;
+  const d = scrapedData;
+  const setVal = (id, val) => { const el = document.getElementById(id); if(el && val !== undefined && val !== null) el.value = val; };
+  const setSel = (id, val) => { const el = document.getElementById(id); if(el && val !== undefined && val !== null) el.value = String(val); };
+
+  setSel("f_neighbourhood",       d.neighbourhood || "Central");
+  setSel("f_property_type",       d.property_type || "Entire home");
+  setSel("f_is_entire_home",      d.is_entire_home !== undefined ? String(d.is_entire_home) : "1");
+  setVal("f_bedrooms",            d.bedrooms);
+  setVal("f_beds",                d.beds);
+  setVal("f_bathrooms",           d.bathrooms);
+  setVal("f_accommodates",        d.accommodates);
+  setVal("f_nightly_price",       d.nightly_price);
+  setVal("f_minimum_nights",      d.minimum_nights);
+  setSel("f_is_superhost",        d.is_superhost !== undefined ? String(d.is_superhost) : "0");
+  setSel("f_instant_bookable",    d.instant_bookable !== undefined ? String(d.instant_bookable) : "0");
+  setSel("f_host_response_time",  d.host_response_time || "within a few hours");
+  if (d.host_response_rate) setVal("f_host_response_rate", Math.round(d.host_response_rate * 100));
+  setVal("f_review_scores_rating",        d.review_scores_rating);
+  setVal("f_review_scores_cleanliness",   d.review_scores_cleanliness);
+  setVal("f_review_scores_location",      d.review_scores_location);
+  setVal("f_review_scores_value",         d.review_scores_value);
+  setVal("f_number_of_reviews",           d.number_of_reviews);
+
+  Object.keys(AMENITY_LABELS).forEach(key => {
+    const el    = document.getElementById(key);
+    const label = document.getElementById("lbl_" + key);
+    if (el) {
+      el.checked = !!d[key];
+      if (label) label.classList.toggle("checked", !!d[key]);
+    }
+  });
+
+  showPage("analyser");
+  const placeholder = document.getElementById("resultsPlaceholder");
+  placeholder.style.display = "flex";
+  document.getElementById("resultsContent").style.display = "none";
+  const name = d.listing_name ? `"${d.listing_name.substring(0,50)}"` : "listing";
+  placeholder.innerHTML = `
+    <div class="icon">✅</div>
+    <h3 style="font-size:1.1rem;font-weight:600;color:var(--navy);margin-bottom:.5rem">Scraped Data Loaded!</h3>
+    <p style="font-size:.88rem">Loaded ${name}.</p>
+    <p style="font-size:.82rem;margin-top:.4rem;color:var(--muted)">Fill in your <b>financial costs</b> below, then click <b>Analyse Property</b>.</p>
+  `;
+}
+
+function clearScrape() {
+  scrapedData = null;
+  document.getElementById("scrapeUrl").value = "";
+  document.getElementById("scrapeStatus").innerHTML = "";
+  document.getElementById("scrapeResult").classList.remove("visible");
+}
+
+// ─── File Upload ──────────────────────────────────────────────────────────────
+function handleFileSelect(input) {
+  if (input.files.length > 0) {
+    selectedFile = input.files[0];
+    document.getElementById("selectedFileName").textContent = "Selected: " + selectedFile.name;
+    document.getElementById("uploadBtn").style.display = "block";
+    document.getElementById("uploadAlert").innerHTML = "";
+  }
+}
+
+// Drag-and-drop
+const uploadZone = document.getElementById("uploadZone");
+uploadZone.addEventListener("dragover", e => { e.preventDefault(); uploadZone.classList.add("drag-over"); });
+uploadZone.addEventListener("dragleave", () => uploadZone.classList.remove("drag-over"));
+uploadZone.addEventListener("drop", e => {
+  e.preventDefault();
+  uploadZone.classList.remove("drag-over");
+  const files = e.dataTransfer.files;
+  if (files.length > 0 && files[0].name.endsWith(".csv")) {
+    selectedFile = files[0];
+    document.getElementById("selectedFileName").textContent = "Selected: " + selectedFile.name;
+    document.getElementById("uploadBtn").style.display = "block";
+    document.getElementById("uploadAlert").innerHTML = "";
+  } else {
+    document.getElementById("uploadAlert").innerHTML = '<div class="alert alert-error">Please drop a CSV file.</div>';
+  }
+});
+
+async function doUpload() {
+  if (!selectedFile) return;
+  const btn  = document.getElementById("uploadBtn");
+  const text = document.getElementById("uploadBtnText");
+  const prog = document.getElementById("uploadProgressBar");
+  const fill = document.getElementById("uploadProgressFill");
+  const alert = document.getElementById("uploadAlert");
+
+  btn.disabled = true;
+  text.innerHTML = '<span class="spinner"></span> Processing...';
+  prog.classList.add("visible");
+  fill.style.width = "0%";
+  alert.innerHTML = '<div class="alert alert-info">Uploading and processing your dataset... this may take 30–60 seconds for large files.</div>';
+  document.getElementById("uploadSummary").classList.remove("visible");
+
+  // Animate progress bar
+  let pct = 0;
+  const interval = setInterval(() => {
+    pct = Math.min(pct + 3, 85);
+    fill.style.width = pct + "%";
+  }, 500);
+
+  try {
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    const r = await fetch("/api/upload", { method: "POST", body: formData });
+    const data = await r.json();
+    clearInterval(interval);
+    fill.style.width = "100%";
+
+    if (data.error) throw new Error(data.error);
+
+    alert.innerHTML = `<div class="alert alert-success">✅ Dataset uploaded successfully! ${data.total_listings.toLocaleString()} listings processed.</div>`;
+    loadCustomDataset(data);
+  } catch(err) {
+    clearInterval(interval);
+    fill.style.width = "0%";
+    alert.innerHTML = `<div class="alert alert-error">❌ Upload failed: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    text.textContent = "Upload & Analyse";
+    prog.classList.remove("visible");
+  }
+}
+
+function loadCustomDataset(data) {
+  addCustomToSelector();
+  // Update upload summary
+  document.getElementById("us_total").textContent   = data.total_listings.toLocaleString();
+  document.getElementById("us_price").textContent   = data.median_price ? `£${data.median_price.toFixed(0)}` : "—";
+  document.getElementById("us_revenue").textContent = data.median_revenue ? `£${Math.round(data.median_revenue).toLocaleString()}` : "—";
+  document.getElementById("us_hoods").textContent   = (data.sample_neighbourhoods || []).slice(0,3).join(", ") || "—";
+  document.getElementById("uploadSummary").classList.add("visible");
+  activeCity = "custom";
+  document.getElementById("citySelect").value = "custom";
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+function showAlert(containerId, msg, type) {
+  const el = document.getElementById(containerId);
+  if (el) el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+}
+</script>
+</body>
+</html>
